@@ -21,3 +21,5 @@ class Generator:
         response=requests.post(url='http://127.0.0.1:8000/predict/',data=json.dumps(request))
         print(response)
         return response
+    
+    
