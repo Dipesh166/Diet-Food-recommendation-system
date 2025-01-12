@@ -22,4 +22,16 @@ class Generator:
         print(response)
         return response
     
+    def generato(self,):
+        request={
+            'nutrition_input':self.nutrition_input,
+            'params':self.params
+
+        }
+        response=requests.post(url='http://127.0.0.1:8000/predict/',data=json.dumps(request))
+        print(response)
+        return response
+
+
+    
     

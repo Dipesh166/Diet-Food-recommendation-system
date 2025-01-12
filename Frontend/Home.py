@@ -15,3 +15,13 @@ st.markdown(
     You can find more details and the whole project on my 
     """
 )
+
+
+# Check if user is logged in
+if "token" in st.session_state:
+    st.write("### Welcome to the Diet Recommendation System!")
+    st.write("You are logged in!")
+else:
+    st.write("### Welcome to the Diet Recommendation System!")
+    st.write("Please log in or sign up.")
+   

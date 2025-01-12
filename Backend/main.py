@@ -4,8 +4,19 @@ from typing import List, Optional
 import pandas as pd
 from model import recommend, output_recommended_recipes
 
+from fastapi import FastAPI, HTTPException, Depends
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from pydantic import BaseModel
+import bcrypt
+import jwt
+import datetime
+from pymongo import MongoClient
+from fastapi.responses import JSONResponse
+
+
+
 # Reading the dataset
-dataset = pd.read_csv('../data/dataset.csv')
+dataset = pd.read_csv('../data/last_20000_rows.csv')
 
 app = FastAPI()
 
@@ -70,3 +81,7 @@ def update_item(prediction_input: PredictionIn):
     
     # Return the recommended recipes as output, fallback to empty list if no recommendations
     return {"output": output if output is not None else []}
+
+
+
+

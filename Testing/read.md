@@ -1,9 +1,7 @@
 import streamlit as st
 import pandas as pd
-import aiohttp
-import asyncio
 from Generate_Recommendations import Generator
-from random import uniform as rnd
+from random import uniform as random
 from ImageFinder.ImageFinder import  find_image
 from streamlit_echarts import st_echarts
 
@@ -18,82 +16,109 @@ if 'person' not in st.session_state:
     st.session_state.recommendations=None
     st.session_state.person=None
     st.session_state.weight_loss_option=None
+import random
+import asyncio
+
 class Person:
 
-    def __init__(self,age,height,weight,gender,activity,meals_calories_perc,weight_loss):
-        self.age=age
-        self.height=height
-        self.weight=weight
-        self.gender=gender
-        self.activity=activity
-        self.meals_calories_perc=meals_calories_perc
-        self.weight_loss=weight_loss
-    def calculate_bmi(self,):
-        bmi=round(self.weight/((self.height/100)**2),2)
+    def __init__(self, age, height, weight, gender, activity, meals_calories_perc, weight_loss):
+        self.age = age
+        self.height = height
+        self.weight = weight
+        self.gender = gender
+        self.activity = activity
+        self.meals_calories_perc = meals_calories_perc
+        self.weight_loss = weight_loss
+
+    def calculate_bmi(self):
+        bmi = round(self.weight / ((self.height / 100) ** 2), 2)
         return bmi
 
-    def display_result(self,):
-        bmi=self.calculate_bmi()
-        bmi_string=f'{bmi} kg/m²'
-        if bmi<18.5:
-            category='Underweight'
-            color='Red'
-        elif 18.5<=bmi<25:
-            category='Normal'
-            color='Green'
-        elif 25<=bmi<30:
-            category='Overweight'
-            color='Yellow'
+    def display_result(self):
+        bmi = self.calculate_bmi()
+        bmi_string = f'{bmi} kg/m²'
+        if bmi < 18.5:
+            category = 'Underweight'
+            color = 'Red'
+        elif 18.5 <= bmi < 25:
+            category = 'Normal'
+            color = 'Green'
+        elif 25 <= bmi < 30:
+            category = 'Overweight'
+            color = 'Yellow'
         else:
-            category='Obesity'    
-            color='Red'
-        return bmi_string,category,color
+            category = 'Obesity'
+            color = 'Red'
+        return bmi_string, category, color
 
     def calculate_bmr(self):
-        if self.gender=='Male':
-            bmr=10*self.weight+6.25*self.height-5*self.age+5
+        if self.gender == 'Male':
+            bmr = 10 * self.weight + 6.25 * self.height - 5 * self.age + 5
         else:
-            bmr=10*self.weight+6.25*self.height-5*self.age-161
+            bmr = 10 * self.weight + 6.25 * self.height - 5 * self.age - 161
         return bmr
 
     def calories_calculator(self):
-        activites=['Little/no exercise', 'Light exercise', 'Moderate exercise (3-5 days/wk)', 'Very active (6-7 days/wk)', 'Extra active (very active & physical job)']
-        weights=[1.2,1.375,1.55,1.725,1.9]
-        weight = weights[activites.index(self.activity)]
-        maintain_calories = self.calculate_bmr()*weight
+        activities = ['Little/no exercise', 'Light exercise', 'Moderate exercise (3-5 days/wk)', 'Very active (6-7 days/wk)', 'Extra active (very active & physical job)']
+        weights = [1.2, 1.375, 1.55, 1.725, 1.9]
+        weight = weights[activities.index(self.activity)]
+        maintain_calories = self.calculate_bmr() * weight
         return maintain_calories
 
-    async def generate_recommendations(self,):
-        total_calories=self.weight_loss*self.calories_calculator()
-        recommendations=[]
-        for meal in self.meals_calories_perc:
-            meal_calories=self.meals_calories_perc[meal]*total_calories
-            if meal=='breakfast':        
-                recommended_nutrition = [meal_calories,rnd(10,30),rnd(0,4),rnd(0,30),rnd(0,400),rnd(40,75),rnd(4,10),rnd(0,10),rnd(30,100)]
-            elif meal=='launch':
-                recommended_nutrition = [meal_calories,rnd(20,40),rnd(0,4),rnd(0,30),rnd(0,400),rnd(40,75),rnd(4,20),rnd(0,10),rnd(50,175)]
-            elif meal=='dinner':
-                recommended_nutrition = [meal_calories,rnd(20,40),rnd(0,4),rnd(0,30),rnd(0,400),rnd(40,75),rnd(4,20),rnd(0,10),rnd(50,175)] 
-            else:
-                recommended_nutrition = [meal_calories,rnd(10,30),rnd(0,4),rnd(0,30),rnd(0,400),rnd(40,75),rnd(4,10),rnd(0,10),rnd(30,100)]
-            generator=Generator(recommended_nutrition)
-            recommended_recipes= await generator.generate().json()['output']
+    async def generate_recommendations(self):
+        # Calculate total daily calories for weight loss
+        total_calories = self.weight_loss * self.calories_calculator()
+        recommendations = []
 
-            st.write(recommended_recipes)
+        # Nutrition ranges for different meals
+        meal_nutrition_ranges = {
+            'breakfast': (10, 30, 0, 4, 0, 30, 0, 400, 40, 75, 4, 10, 0, 10, 30, 100),
+            'lunch': (20, 40, 0, 4, 0, 30, 0, 400, 40, 75, 4, 20, 0, 10, 50, 175),
+            'dinner': (20, 40, 0, 4, 0, 30, 0, 400, 40, 75, 4, 20, 0, 10, 50, 175),
+            'snack': (10, 30, 0, 4, 0, 30, 0, 400, 40, 75, 4, 10, 0, 10, 30, 100)
+        }
 
-            if 'output' in recommended_recipes:
-                 recommendations.append(recommended_recipes['output'])
-            else:
-                st.error("No output found in the response.")     
+        for meal, perc in self.meals_calories_perc.items():
+            # Calculate meal calories and extract ranges
+            meal_calories = perc * total_calories
+            print("Calories and other array")
+            print(meal_calories)
+            ranges = meal_nutrition_ranges.get(meal, meal_nutrition_ranges['dinner'])
+            recommended_nutrition = [
+                meal_calories,
+                random.randint(*ranges[0:2]),
+                random.randint(*ranges[2:4]),
+                random.randint(*ranges[4:6]),
+                random.randint(*ranges[6:8]),
+                random.randint(*ranges[8:10]),
+                random.randint(*ranges[10:12]),
+                random.randint(*ranges[12:14]),
+                random.randint(*ranges[14:16]),
+            ]
 
+            print(recommended_nutrition)
+ 
+            try:
+                # Generate recipes asynchronously
+                generator =  Generator(recommended_nutrition)
+                result = await asyncio.to_thread(generator.generate)  # Run blocking task in a thread
+                recommended_recipes = result.json().get('output', [])
+                print(recommended_recipes)
+            except Exception as e:
+                print(f"Error generating recipes for {meal}: {e}")
+                recommended_recipes = []
 
-            
-            
+            # Add image links synchronously (assuming find_image is not async)
+            for recipe in recommended_recipes:
+                try:
+                    recipe['image_link'] = find_image(recipe['Name'])
+                except Exception as e:
+                    print(f"Error finding image for recipe {recipe['Name']}: {e}")
+                    recipe['image_link'] = None
+
             recommendations.append(recommended_recipes)
-        for recommendation in recommendations:
-            for recipe in recommendation:
-                recipe['image_link']=find_image(recipe['Name']) 
-        return await recommendations
+
+        return recommendations
 
 class Display:
     def __init__(self):
@@ -121,10 +146,10 @@ class Display:
             with col:
                 st.metric(label=plan,value=f'{round(maintain_calories*weight)} Calories/day',delta=loss,delta_color="inverse")
 
-    def display_recommendation(self,person,recommendations):
+    def display_recommendation(self,Person,recommendations,):
         st.header('DIET RECOMMENDATOR')  
         with st.spinner('Generating recommendations...'): 
-            meals=person.meals_calories_perc
+            meals=Person.meals_calories_perc
             st.subheader('Recommended recipes:')
             for meal_name,column,recommendation in zip(meals,st.columns(len(meals)),recommendations):
                 with column:
@@ -274,17 +299,24 @@ with st.form("recommendation_form"):
     else:
         meals_calories_perc={'breakfast':0.30,'morning snack':0.05,'lunch':0.40,'afternoon snack':0.05,'dinner':0.20}
     generated = st.form_submit_button("Generate")
+
+
 if generated:
-    st.session_state.generated=True
-    person = Person(age,height,weight,gender,activity,meals_calories_perc,weight_loss)
+    st.session_state.generated = True
+    person = Person(age, height, weight, gender, activity, meals_calories_perc, weight_loss)
+    
     with st.container():
         display.display_bmi(person)
     with st.container():
         display.display_calories(person)
-    with st.spinner('Generating recommendations...'):     
-        recommendations=  asyncio.run(person.generate_recommendations())
-        st.session_state.recommendations=recommendations
-        st.session_state.person=person
+    
+    # Use asyncio to run the async function generate_recommendations synchronously
+    with st.spinner('Generating recommendations...'):
+        # Use asyncio.run to execute the async function synchronously
+        recommendations = asyncio.run(person.generate_recommendations())  # Run async function synchronously
+        st.session_state.recommendations = recommendations
+        st.session_state.person = person
+
 
 if st.session_state.generated:
     with st.container():
