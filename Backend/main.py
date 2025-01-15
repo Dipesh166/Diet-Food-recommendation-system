@@ -11,13 +11,13 @@ import bcrypt
 import jwt
 import datetime
 from pymongo import MongoClient
-from fastapi.responses import JSONResponse
+
 
 
 
 # Reading the dataset
 dataset = pd.read_csv('../data/last_20000_rows.csv')
-
+ 
 app = FastAPI()
 
 # Define Params model to capture recommendation parameters
@@ -85,3 +85,104 @@ def update_item(prediction_input: PredictionIn):
 
 
 
+
+
+#login
+
+from fastapi import FastAPI, HTTPException, Depends
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from pydantic import BaseModel, EmailStr
+from motor.motor_asyncio import AsyncIOMotorClient
+from bson import ObjectId
+from jose import JWTError, jwt
+import bcrypt
+from datetime import datetime, timedelta
+from dotenv import load_dotenv
+import os
+
+# Load environment variables
+load_dotenv()
+MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
+SECRET_KEY = os.getenv("SECRET_KEY", "mysecretkey")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+# Initialize FastAPI app and MongoDB client
+app = FastAPI()
+client = AsyncIOMotorClient(MONGO_URI)
+db = client["diet_food_app"]
+
+# OAuth2 scheme
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+
+# Models
+class UserSignup(BaseModel):
+    email: EmailStr
+    username: str
+    password: str
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+# Helper to hash passwords
+def hash_password(password: str) -> str:
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+# Helper to verify passwords
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+
+# Helper to create access tokens
+def create_access_token(data: dict, expires_delta: timedelta = None):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=15))
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+# Helper to decode tokens
+async def get_current_user(token: str = Depends(oauth2_scheme)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email = payload.get("sub")
+        if email is None:
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+        user = await db.users.find_one({"email": email})
+        if user is None:
+            raise HTTPException(status_code=401, detail="User not found")
+        return user
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
+# Routes
+@app.post("/signup")
+async def signup(user: UserSignup):
+    existing_user = await db.users.find_one({"email": user.email})
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email already exists.")
+    
+    hashed_password = hash_password(user.password)
+    user_data = {
+        "email": user.email,
+        "username": user.username,
+        "password": hashed_password,
+    }
+    await db.users.insert_one(user_data)
+    return {"message": "Account created successfully!"}
+
+@app.post("/login", response_model=Token)
+async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+    user = await db.users.find_one({"email": form_data.username})
+    if not user or not verify_password(form_data.password, user["password"]):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    access_token = create_access_token(data={"sub": user["email"]}, expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+    return {"access_token": access_token, "token_type": "bearer"}
+
+@app.get("/profile")
+async def read_profile(current_user: dict = Depends(get_current_user)):
+    return {"email": current_user["email"], "username": current_user["username"]}
