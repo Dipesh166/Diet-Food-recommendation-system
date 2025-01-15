@@ -9,8 +9,6 @@ import asyncio
 st.set_page_config(page_title="Automatic Diet Recommendation", page_icon="💪",layout="wide")
 
 
-
-
 def conHeight():
  st.sidebar.subheader("Feet & Inches to Centimeters")
  feet = st.sidebar.number_input("Feet", min_value=0, step=1, value=0)
@@ -36,7 +34,6 @@ if menu == "Height":
     conHeight()
 elif menu == "Weight":
     conWeight()
-
 
 
 
@@ -156,7 +153,6 @@ class Person:
         
         recommended_recipes = response.json().get('output', [])
         recommendations.append(recommended_recipes)
-       
 
     # Add image links (synchronous)
      for recommendation in recommendations:
@@ -376,10 +372,6 @@ async def main():
                 display.display_meal_choices(st.session_state.person, st.session_state.recommendations)
     else:
         st.error("Please fill the form and generate recommendations first.")
-
-
-
-
 
 
 # Run the async main function

@@ -108,7 +108,7 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 # Initialize FastAPI app and MongoDB client
-app = FastAPI()
+
 client = AsyncIOMotorClient(MONGO_URI)
 db = client["diet_food_app"]
 
