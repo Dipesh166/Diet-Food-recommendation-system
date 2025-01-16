@@ -7,6 +7,23 @@ from streamlit_echarts import st_echarts
 import asyncio
 
 st.set_page_config(page_title="Automatic Diet Recommendation", page_icon="💪",layout="wide")
+st.markdown("""
+    <style>
+    div.stButton > button {
+        background-color: #008CBA; /* Blue color */
+        color: white;
+        font-size: 16px;
+        border: none;
+        border-radius: 8px;
+        padding: 10px 24px;
+        cursor: pointer;
+    }
+
+    div.stButton > button:hover {
+        background-color: #005f75; /* Darker Blue */
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
 def conHeight():
  st.sidebar.subheader("Feet & Inches to Centimeters")
